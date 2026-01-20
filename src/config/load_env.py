@@ -5,6 +5,6 @@ load_dotenv()
 
 class Env:
     def __init__(self):
-        self.FILE_ID = os.getenv("FILE_ID")
+        self.VECTOR_SIZE = os.getenv("VECTOR_SIZE")
 
 env = Env()

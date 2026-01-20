@@ -1,19 +1,12 @@
-from ast import List
 import arxiv
-from datetime import date, datetime, timezone, timedelta
+from ast import List
+from src.model import ArxivPaper
 from typing import Literal, List
-from src.interfaces.interfaces import ArxivPaper
-from pydantic import Field
 from src.utils.log_config import get_logger
-import os
+from pymongo.errors import DuplicateKeyError
+from datetime import datetime, timezone, timedelta
 
 logger = get_logger("Crawler") 
-
-class Paper(ArxivPaper):
-    crawled_at: date = Field(default_factory=lambda: datetime.now(timezone.utc).date())
-
-    class Settings:
-        name = "arxiv_papers"
 
 class ArxivScraper:
     def __init__(self):
@@ -26,9 +19,9 @@ class ArxivScraper:
     def get_paper(
             self,
             topics: List[Literal["AI", "AR", "CC", "CE", "CL", "CR", "CV", "CY", "DB", "DC", "DL", "DM", "DS", "ET", "GR", "GT", "HC", "IR", "IT", "LO", "LG", "MA", "MM", "MS", "NA", "NE", "NI", "OS", "PF", "PL", "RO", "SC", "SD", "SE", "SI", "SY"]] = "AI",
-            days_back: int = 1
+            days_back: int = 3
         ) -> list[ArxivPaper]:
-        """Fetch recent papers from arXiv based on topic and date.
+        """Get recent papers from arXiv based on topic and date.
         
         Args:
             topic (Literal): The research area to filter papers. Defaults to "AI".
@@ -76,13 +69,13 @@ class ArxivScraper:
             List[Dict[str, Any]]: A list of dictionaries containing paper details.
         """
         
+        logger.info(f'Calling the Arxiv API for topics: {topics} in the past {days_back}...')
         today = datetime.now(timezone.utc).date()
-        logger.info(f'>>> [CRAWLER] {os.path.basename(__file__)}: Fetching papers updated after: {today} - {days_back} days')
 
         query = " OR ".join([f"cat:cs.{t}" for t in topics])
         search = arxiv.Search(
             query = query,
-            max_results = 5,
+            max_results = 200,
             sort_by = arxiv.SortCriterion.LastUpdatedDate,
             sort_order=arxiv.SortOrder.Descending
         )
@@ -117,18 +110,30 @@ class ArxivScraper:
                 results_list.append(paper)
                 
         except Exception as e:
-            logger.error(f'>>> [CRAWLER] {os.path.basename(__file__)}: Error fetching papers: {e}')
+            logger.error(f'Error fetching papers: {e}')
         
-        logger.info(f'>>> [CRAWLER] {os.path.basename(__file__)}: Found {len(results_list)} papers updated in the last {days_back} days in topics: {topics}')
+        logger.info(f'Found {len(results_list)} papers updated in the last {days_back} days in topics: {topics}')
 
         return results_list
+    
+    async def save_to_db(self, papers: List[ArxivPaper]) -> int:
+        """An asynchronous function to save to MongoDB via Beanie.
+        Returns the number of new posts added."""
+        if not papers:
+            logger.info("No new papers to save.")
+            return 0
+        
+        new_count = 0
+        logger.info('Start saving to the database...')
 
-if __name__ == "__main__":
-    import asyncio
-    def test_run():
-        scraper = ArxivScraper()
-        papers = scraper.get_paper(topics=["AI"], days_back=2)
-        for p in papers[:3]:
-            logger.info(f'Paper ID: {p.id}, Title: {p.title}, Updated: {p.updated_date}')
+        for paper in papers:
+            try:
+                await paper.insert()
+                new_count += 1
+            except DuplicateKeyError:
+                pass
+            except Exception as e:
+                logger.error(f'Error saving paper ID {paper.id}: {e}')
 
-    test_run()
+        logger.info(f'Saved {new_count} new papers to the Mongodb.')
+        return new_count

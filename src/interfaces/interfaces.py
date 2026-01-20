@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, date, timezone
 
 class ArxivPaper(BaseModel):
     id: str = Field(alias="_id")
@@ -14,6 +14,7 @@ class ArxivPaper(BaseModel):
     summary: str
     prime_category: str
     categories: List[str]
+    crawled_at: date = Field(default_factory=lambda: datetime.now(timezone.utc).date())
 
 class BaseNewsScraper(ABC):
     @abstractmethod

@@ -2,8 +2,8 @@ services:
   app:
     build: .
     container_name: app
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     depends_on:
       mongo:
         condition: service_started
@@ -15,8 +15,14 @@ services:
       - QDRANT_URL=http://qdrant:6333
     volumes:
       - ./src:/app/src
+      - ./logs:/app/logs
     networks:
       - arxiv_net
+    
+    # dev settings
+    # tty: true
+    # stdin_open: true
+    # command: sleep infinity
 
   mongo:
     image: mongo:7.0

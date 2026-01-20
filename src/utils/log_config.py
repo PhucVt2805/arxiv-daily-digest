@@ -1,35 +1,25 @@
-import logging
 import sys
+import logging
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
-LOG_DIR = Path("logs")
-LOG_FILE_PATH = LOG_DIR / "app.log"
-FILE_LOG_FORMAT = "%(filename)s:%(lineno)d - %(asctime)s - %(message)s"
-DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
-CONSOLE_LOG_FORMAT = "%(message)s"
+def setup_logging() -> None:
+    """
+    Initializes the logging system for the application.
 
-def setup_logging():
-    """
-    This function runs at app startup (main.py).
-    Task: Create folders and clean up old logs as required.
-    """
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-    return True
+    This function performs the following actions:
+    1. Creates the log directory if it does not exist.
+    2. Configures the root logger with a RotatingFileHandler (for detailed persistence) and a StreamHandler (for concise console output).
 
-def get_logger(module_name: str) -> logging.Logger:
+    This should be called exactly once at the application startup entry point.
     """
-    Creates a logger for each module
-    """
-    logger = logging.getLogger(module_name)
-    logger.setLevel(logging.DEBUG) 
-    logger.propagate = False
-
-    if logger.handlers:
-        return logger
+    Path("logs").mkdir(parents=True, exist_ok=True)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG) 
+    root_logger.handlers = []
 
     file_handler = RotatingFileHandler(
-        LOG_DIR / "app.log", 
+        Path("logs") / "app.log", 
         maxBytes=5_000_000,
         backupCount=3, 
         encoding="utf-8"
@@ -42,7 +32,22 @@ def get_logger(module_name: str) -> logging.Logger:
     stream_handler.setFormatter(stream_formatter)
     stream_handler.setLevel(logging.DEBUG)
 
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
+    root_logger.addHandler(file_handler)
+    root_logger.addHandler(stream_handler)
 
-    return logger
+def get_logger(module_name: str) -> logging.Logger:
+    """
+    Retrieves a logger instance identified by the given module name.
+
+    This function returns a standard logger that propagates messages to the
+    root logger configured in `setup_logging`. It is safe to call this function
+    at the top level of any module (import time), as it does not perform any
+    I/O operations or handler configurations directly.
+
+    Args:
+        module_name (str): The name of the module requesting the logger.
+
+    Returns:
+        logging.Logger: The configured logger instance.
+    """
+    return logging.getLogger(module_name)

@@ -13,6 +13,6 @@ COPY src ./src
 RUN uv sync --frozen
 
 ENV PATH="/app/.venv/bin:$PATH"
-ENV PYTHONPATH="/app/src"
+ENV PYTHONPATH=/app
 
-CMD ["uv", "run", "src/main.py"]
+CMD ["python", "-m", "src.main"]
