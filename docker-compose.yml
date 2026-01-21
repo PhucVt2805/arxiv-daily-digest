@@ -1,7 +1,9 @@
 services:
-  app:
-    build: .
-    container_name: app
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: arxiv_backend
     ports:
       - "8000:8000"
     depends_on:
@@ -13,16 +15,30 @@ services:
     environment:
       - MONGO_URI=mongodb://${MONGO_USER:-admin}:${MONGO_PASS:-pass}@mongo:27017
       - QDRANT_URL=http://qdrant:6333
+      - VECTOR_SIZE=${VECTOR_SIZE}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     volumes:
-      - ./src:/app/src
+      - ./backend/src:/app/src
       - ./logs:/app/logs
     networks:
       - arxiv_net
-    
-    # dev settings
-    # tty: true
-    # stdin_open: true
-    # command: sleep infinity
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: arxiv_frontend
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend: service_started
+    env_file: .env
+    environment:
+      - BACKEND_API_URL=http://backend:8000
+    networks:
+      - arxiv_net
+    volumes:
+      - ./frontend/src:/app/src
 
   mongo:
     image: mongo:7.0

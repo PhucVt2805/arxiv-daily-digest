@@ -75,7 +75,8 @@ class ArxivScraper:
         query = " OR ".join([f"cat:cs.{t}" for t in topics])
         search = arxiv.Search(
             query = query,
-            max_results = 200,
+            # Tạm sửa để chạy test
+            max_results = 10,
             sort_by = arxiv.SortCriterion.LastUpdatedDate,
             sort_order=arxiv.SortOrder.Descending
         )
@@ -86,8 +87,9 @@ class ArxivScraper:
         try:
             for result in self.client.results(search):
                 print(result.entry_id)
-                if result.updated.date() > today - timedelta(days=days_back):  
-                    break
+                # Tạm comment để chạy test
+                # if result.updated.date() > today - timedelta(days=days_back):  
+                #     break
                 short_id = result.entry_id.split('/')[-1]
 
 
@@ -116,24 +118,25 @@ class ArxivScraper:
 
         return results_list
     
-    async def save_to_db(self, papers: List[ArxivPaper]) -> int:
+    async def save_to_db(self, papers: List[ArxivPaper]) -> List[ArxivPaper]:
         """An asynchronous function to save to MongoDB via Beanie.
         Returns the number of new posts added."""
         if not papers:
             logger.info("No new papers to save.")
-            return 0
+            return []
         
-        new_count = 0
+        new_papers = []
         logger.info('Start saving to the database...')
 
         for paper in papers:
             try:
                 await paper.insert()
-                new_count += 1
+                new_papers.append(paper)
+                logger.debug(f'Add {paper.id} to the database')
             except DuplicateKeyError:
                 pass
             except Exception as e:
                 logger.error(f'Error saving paper ID {paper.id}: {e}')
 
-        logger.info(f'Saved {new_count} new papers to the Mongodb.')
-        return new_count
+        logger.info(f'✅ Saved {new_papers} new papers to the Mongodb.')
+        return new_papers

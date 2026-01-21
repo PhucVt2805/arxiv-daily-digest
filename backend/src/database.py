@@ -1,9 +1,9 @@
 import os
-from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
 from qdrant_client import AsyncQdrantClient
+from motor.motor_asyncio import AsyncIOMotorClient
 from qdrant_client.models import Distance, VectorParams
-from src.config.load_env import env
+
 from src.utils.log_config import get_logger
 from src.model import ArxivPaper, ChatSession
 
@@ -60,7 +60,7 @@ async def _ensure_qdrant_collection(collection_name: str):
             await qdrant_client.create_collection(
                 collection_name=collection_name,
                 vectors_config=VectorParams(
-                    size=env.VECTOR_SIZE,
+                    size=os.getenv("VECTOR_SIZE"),
                     distance=Distance.COSINE
                 )
             )

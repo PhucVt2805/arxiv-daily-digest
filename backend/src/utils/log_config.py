@@ -35,6 +35,12 @@ def setup_logging() -> None:
     root_logger.addHandler(file_handler)
     root_logger.addHandler(stream_handler)
 
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("pymongo").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("qdrant_client").setLevel(logging.WARNING)
+
 def get_logger(module_name: str) -> logging.Logger:
     """
     Retrieves a logger instance identified by the given module name.
